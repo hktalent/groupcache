@@ -107,4 +107,5 @@ func benchmarkGet(b *testing.B, shards int) {
 	for i := 0; i < b.N; i++ {
 		hash.Get(buckets[i&(shards-1)])
 	}
+	hash.Remove("shard-0", "shard-8", "shard-30", "shard-100")
 }

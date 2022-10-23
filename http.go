@@ -26,9 +26,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/groupcache/consistenthash"
-	pb "github.com/golang/groupcache/groupcachepb"
 	"github.com/golang/protobuf/proto"
+	"github.com/hktalent/groupcache/consistenthash"
+	pb "github.com/hktalent/groupcache/groupcachepb"
 )
 
 const defaultBasePath = "/_groupcache/"
@@ -124,6 +124,36 @@ func (p *HTTPPool) Set(peers ...string) {
 	p.httpGetters = make(map[string]*httpGetter, len(peers))
 	for _, peer := range peers {
 		p.httpGetters[peer] = &httpGetter{transport: p.Transport, baseURL: peer + p.opts.BasePath}
+	}
+}
+
+// add peers
+// Each peer value should be a valid base URL,
+// for example "http://example.net:8000".
+func (p *HTTPPool) Add(peers ...string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if nil == p.peers {
+		p.peers = consistenthash.New(p.opts.Replicas, p.opts.HashFn)
+	}
+	p.peers.Add(peers...)
+	if nil == p.httpGetters {
+		p.httpGetters = make(map[string]*httpGetter, len(peers))
+	}
+	for _, peer := range peers {
+		p.httpGetters[peer] = &httpGetter{transport: p.Transport, baseURL: peer + p.opts.BasePath}
+	}
+}
+
+// remove peers
+// Each peer value should be a valid base URL,
+// for example "http://example.net:8000".
+func (p *HTTPPool) RemovePeers(peers ...string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.peers.Remove(peers...)
+	for _, peer := range peers {
+		delete(p.httpGetters, peer)
 	}
 }
 
